@@ -3,7 +3,6 @@ info:
   title: Redpanda Admin API
   version: 1.0.0
   description: |
-  
     Use the Admin API to administer and manage Redpanda.
 
     ---
@@ -43,7 +42,7 @@ paths:
       responses:
         200:
           description: Brokers' configurations response
-          externalDocs: 
+          externalDocs:
             url: https://docs.redpanda.com/docs/reference/node-properties/
           content:
             application/json:
@@ -56,12 +55,12 @@ paths:
       tags:
       - Logging
       summary: Get loggers
-      description: List of all registered loggers. Each logger has its own configurable `log_level` that dictates how verbose logs are within their corresponding subsystems. 
+      description: List of all registered loggers. Each logger has its own configurable `log_level` that dictates how verbose logs are within their corresponding subsystems.
       operationId: get_loggers
       responses:
         200:
           description: Loggers response
-          content:  
+          content:
             application/json:
               schema:
                 type: array
@@ -95,12 +94,11 @@ paths:
           - trace
       - name: expires
         in: query
-        description: | 
+        description: |
           Duration, in seconds, that the logger is set to the specified log level, after which the level reverts to its previous value.
 
           * **Default value**: 600 (10 minutes)
           * **Valid values**: `0` (infinite duration) or greater
-  
         schema:
           type: number
       responses:
@@ -208,6 +206,191 @@ paths:
         200:
           description: Raft leadership transfer success
           content: {}
+  /v1/security/roles:
+    get:
+      parameters:
+        - description: Return only roles whose names match this substring
+          in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+        - description: Return only roles which are assigned to this user
+          in: query
+          name: principal
+          required: false
+          schema:
+            type: string
+        - description: Applies to `principal` parameter. Ignored if `principal` is not set
+          in: query
+          name: principal_type
+          required: false
+          schema:
+            enum:
+              - User
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/roles_list'
+          description: OK
+      tags:
+        - Roles
+      operationId: list_roles
+      summary: List roles
+    post:
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/role_definition'
+          description: Created
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Bad Request
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Conflict
+      tags:
+        - Roles
+      operationId: create_role
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/role_definition'
+        required: true
+      summary: Create a role
+  '/v1/security/roles/{role}':
+    delete:
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Role successfully deleted
+          content: {}
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Not Found
+      tags:
+        - Roles
+      operationId: delete_role
+      summary: Remove a role by name
+    get:
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/role'
+          description: OK
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Not Found
+      tags:
+        - Roles
+      operationId: get_role
+      summary: Get the specified role
+  '/v1/security/roles/{role}/members':
+    get:
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/role_members_list'
+          description: OK
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Not Found
+      tags:
+        - Roles
+      operationId: list_role_members
+      summary: List members assigned a given role
+    post:
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+        - description: 'Creates a role with name {role} if not found'
+          in: query
+          name: create
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/role_member_update_response'
+          description: OK
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rbac_error_body'
+          description: Not found
+      tags:
+        - Roles
+      operationId: update_role_members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                add:
+                  items:
+                    $ref: '#/components/schemas/role_member'
+                  type: array
+                remove:
+                  items:
+                    $ref: '#/components/schemas/role_member'
+                  type: array
+              type: object
+      summary: Update role membership
   /security/users:
     get:
       tags:
@@ -243,7 +426,7 @@ paths:
               $ref: '#/components/schemas/security_create_user'
       responses:
         200:
-          description: Create user success
+          description: User successfully created
           content: {}
   /security/users/{user}:
     put:
@@ -265,7 +448,7 @@ paths:
               $ref: '#/components/schemas/scram_credential'
       responses:
         200:
-          description: Update user success
+          description: User successfully updated
           content: {}
     delete:
       tags:
@@ -281,8 +464,81 @@ paths:
           type: string
       responses:
         200:
-          description: Delete user success
+          description: User successfully deleted
           content: {}
+  /v1/security/users/roles:
+    get:
+      parameters:
+        - description: Return only roles whose names match this substring
+          in: query
+          name: filter
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/roles_list'
+          description: OK
+        '401':
+          description: Unauthorized
+      tags:
+        - Users
+      operationId: list_user_roles
+      summary: List role assignments for a user
+  /security/oidc/whoami:
+    get:
+      tags: 
+        -  Authentication
+      summary: Verify identity of current user and resolve to a principal
+      description: Obtain the principal and details of the JWT passed in the bearer token.
+      operationId: oidc_whoami   
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oidc_whoami_response'            
+        401:
+          description: Unauthorized
+          content: {}      
+  /security/oidc/keys/cache_invalidate:
+    post:
+      tags: 
+        -  Authentication
+      summary: Reload the keys from the identity provider
+      description: Flush the JWK cache and force reload keys.
+      operationId: oidc_keys_cache_invalidate
+      responses: 
+        200:
+          description: Keys reload successful
+          content: {}
+        500:
+          description: Keys reload failed
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/oidc_keys_cache_invalidate_error_response'
+  /security/oidc/revoke:
+    post: 
+      tags: 
+        -  Authentication
+      summary: Reload the keys from the identity provider and disconnect clients
+      description: Explicitly revoke client tokens by flushing caches and disconnecting clients to ensure revoked tokens are not used.
+      operationId: oidc_revoke  
+      responses:
+        200:
+          description: Key reload successful
+          content: {}
+        500: 
+          description: Key reload failed
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/oidc_keys_cache_invalidate_error_response' 
   /status/ready:
     get:
       tags:
@@ -1178,7 +1434,7 @@ paths:
       operationId: get_cpu_profile
       tags:
       - Debugging
-      summary: Get samples from CPU profiler 
+      summary: Get samples from CPU profiler
       responses:
         200:
           description: CPU profile
@@ -1187,28 +1443,90 @@ paths:
                 schema:
                   type: array
                   items:
-                    $ref: '#/components/schemas/cpu_profile_shard_sample' 
+                    $ref: '#/components/schemas/cpu_profile_shard_sample'
         400:
           description: Invalid request
           content:
             application/json:
-              schema: 
+              schema:
                 oneOf:
-                  - $ref: '#/components/schemas/shard_error' 
-                  - $ref: '#/components/schemas/wait_ms_error'           
-    parameters: 
+                  - $ref: '#/components/schemas/shard_error'
+                  - $ref: '#/components/schemas/wait_ms_error'
+    parameters:
       - name: shard
         in: query
         required: false
         schema:
           type: integer
-          format: int64  
+          format: int64
       - name: wait_ms
         in: query
         required: false
         schema:
           type: integer
-          format: int64 
+          format: int64
+  /debug/partitions/{namespace}/{topic}/{partition}/force_replicas:
+    post:
+      tags:
+      -  Partitions
+      summary: Force update replicas
+      operationId: force_update_partition_replicas
+      description: Force update partition replicas
+      responses:
+        200:
+          description: Replica update successful
+          content: {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              description: Replica assignments
+              items:
+                $ref: '#/components/schemas/assignment'
+    parameters:
+      - name: namespace
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: partition
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+  /debug/restart_service:
+    put:
+      tags: 
+        -  Debugging
+      summary: Restart service
+      description: Restart a Redpanda service.
+      operationId: restart_service
+      parameters:
+        - name: service
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: 
+            - http-proxy
+            - schema-registry
+      responses:
+        200:
+          description: Restart successful
+        400:
+          description: Service name is required
+        404:
+          description: Service not found
+        500:
+          description: Internal Server Error 
   /cloud_storage/initiate_topic_scan_and_recovery:
     get:
       tags:
@@ -1343,29 +1661,7 @@ paths:
       responses:
         200:
           description: Partition metadata is up to date
-          content: {}
-  /redpanda-services/restart:
-    put:
-      tags:
-      - Services
-      summary: Restart service
-      description: Restart a Redpanda service.
-      operationId: redpanda_services_restart
-      parameters:
-      - name: service
-        in: query
-        required: true
-        schema:
-          type: string
-      responses:
-        200:
-          description: Restart successful
-        400:
-          description: Service name is required
-        404:
-          description: Service not found
-        500:
-          description: Internal server error          
+          content: {}       
 components:
   schemas:
     broker_endpoint:
@@ -4765,29 +5061,111 @@ components:
       description: TBD
     shard_error:
       type: object
-      properties: 
+      properties:
         message:
           type: string
           example: "Invalid shard ID, check shard limit"
-        code: 
+        code:
           type: integer
           example: 400
     wait_ms_error:
       type: object
-      properties: 
+      properties:
         message:
           type: string
           example: "wait_ms must be between 1ms and 15min"
-        code: 
+        code:
           type: integer
           example: 400
-
+    oidc_whoami_response:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Mapped principal for authorization
+        expire:
+          type: integer
+          format: int64
+          description: Unix timestamp of the expiry of the token
+    oidc_keys_cache_invalidate_error_response:
+      type: object
+      properties:
+        error_message:
+          type: string 
+    rbac_error_body:
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+      type: object
+    role:
+      properties:
+        members:
+          items:
+            $ref: '#/components/schemas/role_member'
+          type: array
+        name:
+          type: string
+      type: object
+    role_definition:
+      properties:
+        role:
+          type: string
+      type: object
+    role_description:
+      properties:
+        name:
+          type: string
+      type: object
+    role_member:
+      properties:
+        name:
+          type: string
+        principal_type:
+          enum:
+            - User
+          type: string
+      type: object
+    role_member_update_response:
+      properties:
+        added:
+          items:
+            $ref: '#/components/schemas/role_member'
+          type: array
+        created:
+          type: boolean
+        removed:
+          items:
+            $ref: '#/components/schemas/role_member'
+          type: array
+        role:
+          type: string
+      type: object
+    role_members_list:
+      properties:
+        members:
+          items:
+            $ref: '#/components/schemas/role_member'
+          type: array
+      type: object
+    roles_list:
+      properties:
+        roles:
+          items:
+            $ref: '#/components/schemas/role_description'
+          type: array
+      type: object
 
 tags:
+  - name: Authentication
+    description: |
+
+      Authenticate and authorize access to Redpanda.
   - name: Clusters
     description: |
 
-      Configure a Redpanda cluster's properties. 
+      Configure a Redpanda cluster's properties.
 
   - name: Brokers
     description: |
@@ -4800,17 +5178,19 @@ tags:
       Manage partitions of a Redpanda cluster.
 
   - name: Tiered Storage
-    description: Manage 
+    description: Manage Tiered Storage.
   - name: Transactions
   - name: Users
     description: Manage SCRAM (Salted Challenge Response Authentication Mechanism) users.
+  - name: Roles
+    description: Role object and role membership management.
   - name: Licenses and Features
     description: Manage Redpanda licenses and available licensed features.
   - name: Logging
     description: Get available loggers, and set log levels.
   - name: Debugging
-    description: | 
-      Debug a Redpanda cluster.  
+    description: |
+      Debug a Redpanda cluster.
 
       For details about debugging in the latest version of Redpanda version, see [Cluster Diagnostics](https://docs.redpanda.com/docs/manage/cluster-maintenance/cluster-diagnostics/).
   - name: Services
